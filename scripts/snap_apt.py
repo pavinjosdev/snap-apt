@@ -60,7 +60,7 @@ if action == "pre":
         # get all package names for comparison later
         pkg_names = shell_exec("apt list --installed | cut -d '/' -f 1").split()
     # take snapper pre snapshot
-    snapper_description = f"Pre APT: {apt_action}"
+    snapper_description = f"Before apt: {apt_action}"
     command = f"{snapper_path} -c {SNAPPER_CONF} create -t pre -c number -p -d '{snapper_description}'"
     pre_num = shell_exec(command)
     with open(TMP_FILE, "w") as fh:
@@ -106,11 +106,11 @@ elif action == "post":
             apt_action = f"Remove {', '.join(removed_packages)}"
         else:
             apt_action = f"Remove {removed_packages_num} packages"
-        snapper_description = f"Pre APT: {apt_action}"
+        snapper_description = f"Before apt: {apt_action}"
         command = f"{snapper_path} -c {SNAPPER_CONF} modify -d '{snapper_description}' {pre_num}"
         shell_exec(command)
     # take snapper post snapshot
-    snapper_description = f"Post APT: {apt_action}"
+    snapper_description = f"After apt: {apt_action}"
     command = f"{snapper_path} -c {SNAPPER_CONF} create -t post -c number --pre-number {pre_num} -p -d '{snapper_description}'"
     post_num = shell_exec(command)
     os.remove(TMP_FILE)
