@@ -1,4 +1,4 @@
 # Hooks for creating pre/post snapper snapshots on APT transactions
 
-DPkg::Pre-Invoke {"snap-apt pre";};
-DPkg::Post-Invoke {"snap-apt post";}; 
+DPkg::Pre-Install-Pkgs {"snap-apt pre";};
+DPkg::Post-Invoke {"snap-apt post";};
