@@ -15,5 +15,7 @@ cp snap-apt/scripts/snap_apt.py /usr/bin/snap-apt
 cp snap-apt/hooks/80snap-apt /etc/apt/apt.conf.d/
 ```
 
+## Configuration
+Most likely, configuration is not needed.
 By default, the snapper configuration named
 `root` will have pre/post snapshots taken for every APT transaction.
