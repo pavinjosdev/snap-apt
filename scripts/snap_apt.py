@@ -14,7 +14,7 @@ APT_LEN = 72 # snapper description apt command max length
 TMP_FILE = f"{gettempdir()}/snap-apt.json" # file to store temp data
 
 # Setup logging
-logging.basicConfig(filename=f"{gettempdir()}/snap-apt.log", format="%(asctime)s: %(levelname)s: %(filename)s: %(module)s: %(funcName)s: %(message)s", level=logging.INFO)
+logging.basicConfig(filename=f"{gettempdir()}/snap-apt.log", format="%(asctime)s: %(levelname)s: %(message)s", level=logging.INFO)
 
 # Function to get output of shell command
 def shell_exec(command):
@@ -50,6 +50,12 @@ if not (apt_path or snapper_path):
 
 # Process pre hook
 if action == "pre":
+    # do nothing on double invocation by external programs
+    if os.path.isfile(TMP_FILE):
+        msg = "Not processing pre snapshot as this is a double (back-to-back) invocation"
+        print(msg)
+        logging.warning(msg)
+        sys.exit()
     # get packages to be installed from stdin
     pkg_files = sys.stdin.readlines()
     pkgs = [x.split("/").pop().rstrip() for x in pkg_files]
@@ -85,19 +91,20 @@ if action == "pre":
 
 # Process post hook
 elif action == "post":
+    # do nothing on double invocation by external programs
+    if not os.path.isfile(TMP_FILE):
+        msg = "Not processing post snapshot as this is a double (back-to-back) invocation"
+        print(msg)
+        logging.warning(msg)
+        sys.exit()
     try:
         with open(TMP_FILE, "r") as fh:
             saved_obj = json.load(fh)
-    except FileNotFoundError:
-        msg = f"Error: Could not obtain saved pre snapshot details from temp file {TMP_FILE}"
-        print(msg)
-        logging.error(msg)
-        sys.exit(3)
     except json.JSONDecodeError:
         msg = f"Error: Could not load valid JSON data from saved pre snapshot temp file {TMP_FILE}"
         print(msg)
         logging.error(msg)
-        sys.exit(4)
+        sys.exit(3)
     pre_num = saved_obj["pre_num"]
     apt_action = saved_obj["apt_action"]
     # take snapper post snapshot
