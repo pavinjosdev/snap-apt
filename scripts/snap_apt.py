@@ -19,9 +19,8 @@ logging.basicConfig(filename=f"{gettempdir()}/snap-apt.log", format="%(asctime)s
 def shell_exec(command):
     res = subprocess.run(command, shell=True, capture_output=True, encoding="utf8", errors="replace")
     if res.stderr:
-        msg = f"Error occurred on executing shell command {command} :: {res.stderr.strip()}"
-        print(msg)
-        logging.error(msg)
+        msg = f"Probable issue executing shell command {command} :: {res.stderr.strip()}"
+        logging.warning(msg)
     return res.stdout.strip()
 
 # Get action arg
