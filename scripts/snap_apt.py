@@ -10,7 +10,6 @@ from tempfile import gettempdir
 
 # Constants
 SNAPPER_CONF = "root" # snapper config name
-APT_LEN = 72 # snapper description apt command max length
 TMP_FILE = f"{gettempdir()}/snap-apt.json" # file to store temp data
 
 # Setup logging
@@ -33,17 +32,11 @@ if action not in ["pre", "post"]:
     logging.warning(msg)
     sys.exit(1)
 
-# Get path to apt
-apt_path = shell_exec("command -v apt")
-
-# Get path to apt-get
-aptget_path = shell_exec("command -v apt-get")
-
 # Get path to snapper
 snapper_path = shell_exec("command -v snapper")
 
-if not (apt_path or snapper_path):
-    msg = f"Error: Unable to find apt and/or snapper installed for user {os.environ.get('USER')}"
+if not snapper_path:
+    msg = f"Error: Cannot find snapper for user {os.environ.get('USER')}"
     print(msg)
     logging.error(msg)
     sys.exit(2)
@@ -61,18 +54,13 @@ if action == "pre":
     pkgs = [x.split("/").pop().rstrip() for x in pkg_files]
     pkg_names = [x.split("_").pop(0) for x in pkgs]
     if pkg_names:
-        apt_action = f"Install {','.join(pkg_names)}"
+        apt_action = f"Install {', '.join(pkg_names)}"
     else:
-        # check if there was an apt call
-        apt_call = shell_exec(f"ps aux | grep -v grep | grep -E '{apt_path}|{aptget_path}' | head -n1")
-        # parse apt command
-        match = re.search(r"^.+(apt.+$)", apt_call)
-        if match:
-            apt_action = match.group(1)
-        else:
-            apt_action = "Unknown invocation"
+        apt_action = "unknown"
+        # get all package names for comparison later
+        pkg_names = shell_exec("apt list --installed | cut -d '/' -f 1").split()
     # take snapper pre snapshot
-    snapper_description = f"Before APT: {apt_action[:APT_LEN] if len(apt_action) <= APT_LEN else apt_action[:APT_LEN-3] + '...'}"
+    snapper_description = f"Pre APT: {apt_action}"
     command = f"{snapper_path} -c {SNAPPER_CONF} create -t pre -c number -p -d '{snapper_description}'"
     pre_num = shell_exec(command)
     with open(TMP_FILE, "w") as fh:
@@ -80,6 +68,7 @@ if action == "pre":
             {
                 "pre_num": pre_num,
                 "apt_action": apt_action,
+                "pkg_names": pkg_names,
             },
             fh,
             indent=3,
@@ -107,8 +96,21 @@ elif action == "post":
         sys.exit(3)
     pre_num = saved_obj["pre_num"]
     apt_action = saved_obj["apt_action"]
+    if apt_action == "unknown":
+        old_packages = saved_obj["pkg_names"]
+        new_packages = shell_exec("apt list --installed | cut -d '/' -f 1").split()
+        removed_packages_num = len(old_packages) - len(new_packages)
+        removed_packages = list( set(old_packages) - set(new_packages) )
+        # update description of pre snapshot
+        if removed_packages:
+            apt_action = f"Remove {', '.join(removed_packages)}"
+        else:
+            apt_action = f"Remove {removed_packages_num} packages"
+        snapper_description = f"Pre APT: {apt_action}"
+        command = f"{snapper_path} -c {SNAPPER_CONF} modify -d '{snapper_description}' {pre_num}"
+        shell_exec(command)
     # take snapper post snapshot
-    snapper_description = f"After APT: {apt_action[:APT_LEN] if len(apt_action) <= APT_LEN else apt_action[:APT_LEN-3] + '...'}"
+    snapper_description = f"Post APT: {apt_action}"
     command = f"{snapper_path} -c {SNAPPER_CONF} create -t post -c number --pre-number {pre_num} -p -d '{snapper_description}'"
     post_num = shell_exec(command)
     os.remove(TMP_FILE)
