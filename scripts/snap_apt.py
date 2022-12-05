@@ -64,8 +64,8 @@ if action == "pre":
     pkgs = [x.split("/").pop().rstrip() for x in pkg_files]
     pkg_names = [x.split("_").pop(0) for x in pkgs]
     apt_action = "install" if pkg_names else None
-    # get all package names for comparison later
     if not apt_action:
+        # get all package names for comparison later
         pkg_names = shell_exec("apt list --installed | cut -d '/' -f 1").split()
     # take snapper pre snapshot
     snapper_description = gen_desc("Before apt", apt_action, pkg_names)
@@ -114,8 +114,9 @@ elif action == "post":
         snapper_description = gen_desc("Before apt", apt_action, removed_packages)
         command = f"{snapper_path} -c {SNAPPER_CONF} modify -d '{snapper_description}' {pre_num}"
         shell_exec(command)
-        snapper_description = gen_desc("After apt", apt_action, removed_packages)
         logging.info(f"apt {apt_action} {' '.join(removed_packages)}")
+        # generate description for post snapshot
+        snapper_description = gen_desc("After apt", apt_action, removed_packages)
     else:
         snapper_description = gen_desc("After apt", apt_action, pkg_names)
         logging.info(f"apt {apt_action} {' '.join(pkg_names)}")
