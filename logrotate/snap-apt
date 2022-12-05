@@ -1,7 +1,7 @@
 /var/log/snap-apt.log
 {
-    rotate 7
-    daily
+    rotate 4
+    weekly
     missingok
     notifempty
     delaycompress
