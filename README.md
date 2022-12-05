@@ -22,5 +22,5 @@ By default, the snapper configuration named
 `root` will have pre/post snapshots taken for every APT transaction.
 
 ## Troubleshooting
-By default, the log is written to `/tmp/snap-apt.log`.
+By default, the log is written to `/var/log/snap-apt.log`.
 
