@@ -19,3 +19,7 @@ cp snap-apt/hooks/80snap-apt /etc/apt/apt.conf.d/
 Most likely, configuration is not needed.
 By default, the snapper configuration named
 `root` will have pre/post snapshots taken for every APT transaction.
+
+## Troubleshooting
+By default, the log is written to `/tmp/snap-apt.log`.
+
