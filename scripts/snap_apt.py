@@ -105,6 +105,7 @@ elif action == "post":
     pre_num = saved_obj["pre_num"]
     apt_action = saved_obj["apt_action"]
     pkg_names = saved_obj["pkg_names"]
+    snapper_description = gen_desc("After apt", apt_action, pkg_names)
     if not apt_action:
         old_packages = pkg_names
         new_packages = shell_exec("apt list --installed | cut -d '/' -f 1").split()
@@ -114,8 +115,8 @@ elif action == "post":
         snapper_description = gen_desc("Before apt", apt_action, removed_packages)
         command = f"{snapper_path} -c {SNAPPER_CONF} modify -d '{snapper_description}' {pre_num}"
         shell_exec(command)
+        snapper_description = gen_desc("After apt", apt_action, removed_packages)
     # take snapper post snapshot
-    snapper_description = gen_desc("After apt", apt_action, pkg_names)
     command = f"{snapper_path} -c {SNAPPER_CONF} create -t post -c number --pre-number {pre_num} -p -d '{snapper_description}'"
     post_num = shell_exec(command)
     os.remove(TMP_FILE)
