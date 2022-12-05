@@ -9,8 +9,8 @@ import subprocess
 # Constants
 SNAPPER_CONF = "root" # snapper config name
 DESC_LEN = 72 # snapshot description max length
+LOG_FILE = "/var/log/snap-apt.log" # file to log events
 TMP_FILE = "/tmp/snap-apt.json" # file to store temp data
-LOG_FILE = "/tmp/snap-apt.log" # file to log events
 
 # Setup logging
 logging.basicConfig(filename=LOG_FILE, format="%(asctime)s: %(levelname)s: %(message)s", level=logging.INFO)
@@ -105,7 +105,6 @@ elif action == "post":
     pre_num = saved_obj["pre_num"]
     apt_action = saved_obj["apt_action"]
     pkg_names = saved_obj["pkg_names"]
-    snapper_description = gen_desc("After apt", apt_action, pkg_names)
     if not apt_action:
         old_packages = pkg_names
         new_packages = shell_exec("apt list --installed | cut -d '/' -f 1").split()
@@ -116,6 +115,10 @@ elif action == "post":
         command = f"{snapper_path} -c {SNAPPER_CONF} modify -d '{snapper_description}' {pre_num}"
         shell_exec(command)
         snapper_description = gen_desc("After apt", apt_action, removed_packages)
+        logging.info(f"apt {apt_action} {' '.join(removed_packages)}")
+    else:
+        snapper_description = gen_desc("After apt", apt_action, pkg_names)
+        logging.info(f"apt {apt_action} {' '.join(pkg_names)}")
     # take snapper post snapshot
     command = f"{snapper_path} -c {SNAPPER_CONF} create -t post -c number --pre-number {pre_num} -p -d '{snapper_description}'"
     post_num = shell_exec(command)
