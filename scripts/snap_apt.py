@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 
 import os
-import re
 import sys
 import json
 import logging
 import subprocess
-from tempfile import gettempdir
 
 # Constants
 SNAPPER_CONF = "root" # snapper config name
-TMP_FILE = f"{gettempdir()}/snap-apt.json" # file to store temp data
+TMP_FILE = "/tmp/snap-apt.json" # file to store temp data
+LOG_FILE = "/tmp/snap-apt.log" # file to log events
 
 # Setup logging
-logging.basicConfig(filename=f"{gettempdir()}/snap-apt.log", format="%(asctime)s: %(levelname)s: %(message)s", level=logging.INFO)
+logging.basicConfig(filename=LOG_FILE, format="%(asctime)s: %(levelname)s: %(message)s", level=logging.INFO)
 
 # Function to get output of shell command
 def shell_exec(command):
@@ -31,11 +30,14 @@ if action not in ["pre", "post"]:
     logging.warning(msg)
     sys.exit(1)
 
+# Get path to apt
+apt_path = shell_exec("command -v apt")
+
 # Get path to snapper
 snapper_path = shell_exec("command -v snapper")
 
-if not snapper_path:
-    msg = f"Error: Cannot find snapper for user {os.environ.get('USER')}"
+if not (apt_path or snapper_path):
+    msg = f"Error: Cannot find apt and/or snapper in PATH ({os.environ.get('PATH')}) for user {os.environ.get('USER')}"
     print(msg)
     logging.error(msg)
     sys.exit(2)
