@@ -8,6 +8,7 @@ import subprocess
 
 # Constants
 SNAPPER_CONF = "root" # snapper config name
+DESC_LEN = 72 # snapshot description max length
 TMP_FILE = "/tmp/snap-apt.json" # file to store temp data
 LOG_FILE = "/tmp/snap-apt.log" # file to log events
 
@@ -21,6 +22,14 @@ def shell_exec(command):
         msg = f"Probable issue executing shell command {command} :: {res.stderr.strip()}"
         logging.warning(msg)
     return res.stdout.strip()
+
+# Function to generate snapper description
+def gen_desc(prefix, action, packages):
+    description = f"{prefix}: {action} {','.join(packages)}"
+    if len(description) > DESC_LEN:
+        short_pkg_name = f"{packages[0]}" if len(packages[0]) <= 32 else f"{packages[0][:30]}.."
+        description = f"{prefix}: {action} {short_pkg_name} plus {len(packages) -1} packages"
+    return description
 
 # Get action arg
 action = sys.argv.pop()
@@ -54,14 +63,12 @@ if action == "pre":
     pkg_files = sys.stdin.readlines()
     pkgs = [x.split("/").pop().rstrip() for x in pkg_files]
     pkg_names = [x.split("_").pop(0) for x in pkgs]
-    if pkg_names:
-        apt_action = f"Install {', '.join(pkg_names)}"
-    else:
-        apt_action = "unknown"
-        # get all package names for comparison later
+    apt_action = "install" if pkg_names else None
+    # get all package names for comparison later
+    if not apt_action:
         pkg_names = shell_exec("apt list --installed | cut -d '/' -f 1").split()
     # take snapper pre snapshot
-    snapper_description = f"Before apt: {apt_action}"
+    snapper_description = gen_desc("Before apt", apt_action, pkg_names)
     command = f"{snapper_path} -c {SNAPPER_CONF} create -t pre -c number -p -d '{snapper_description}'"
     pre_num = shell_exec(command)
     with open(TMP_FILE, "w") as fh:
@@ -97,21 +104,18 @@ elif action == "post":
         sys.exit(3)
     pre_num = saved_obj["pre_num"]
     apt_action = saved_obj["apt_action"]
-    if apt_action == "unknown":
-        old_packages = saved_obj["pkg_names"]
+    pkg_names = saved_obj["pkg_names"]
+    if not apt_action:
+        old_packages = pkg_names
         new_packages = shell_exec("apt list --installed | cut -d '/' -f 1").split()
-        removed_packages_num = len(old_packages) - len(new_packages)
         removed_packages = list( set(old_packages) - set(new_packages) )
         # update description of pre snapshot
-        if removed_packages:
-            apt_action = f"Remove {', '.join(removed_packages)}"
-        else:
-            apt_action = f"Remove {removed_packages_num} packages"
-        snapper_description = f"Before apt: {apt_action}"
+        apt_action = "remove"
+        snapper_description = gen_desc("Before apt", apt_action, removed_packages)
         command = f"{snapper_path} -c {SNAPPER_CONF} modify -d '{snapper_description}' {pre_num}"
         shell_exec(command)
     # take snapper post snapshot
-    snapper_description = f"After apt: {apt_action}"
+    snapper_description = gen_desc("After apt", apt_action, pkg_names)
     command = f"{snapper_path} -c {SNAPPER_CONF} create -t post -c number --pre-number {pre_num} -p -d '{snapper_description}'"
     post_num = shell_exec(command)
     os.remove(TMP_FILE)
