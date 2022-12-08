@@ -14,6 +14,8 @@ chmod 755 snap-apt/scripts/snap_apt.py
 cp snap-apt/scripts/snap_apt.py /usr/bin/snap-apt
 cp snap-apt/hooks/80snap-apt /etc/apt/apt.conf.d/
 cp snap-apt/logrotate/snap-apt /etc/logrotate.d/
+rm -f /etc/apt/apt.conf.d/80snapper
+sed -i 's/DISABLE_APT_SNAPSHOT=\"no\"/DISABLE_APT_SNAPSHOT=\"yes\"/g' /etc/default/snapper
 ```
 
 ## Configuration
