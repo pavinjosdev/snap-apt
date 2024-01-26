@@ -11,17 +11,23 @@ SNAPPER_CONF = "root" # snapper config name
 DESC_LEN = 72 # snapshot description max length
 LOG_FILE = "/var/log/snap-apt.log" # file to log events
 TMP_FILE = "/tmp/snap-apt.json" # file to store temp data
+DEBUG = False # set to True for debug output
 
 # Setup logging
-logging.basicConfig(filename=LOG_FILE, format="%(asctime)s: %(levelname)s: %(message)s", level=logging.INFO)
+logging.basicConfig(
+    filename=LOG_FILE,
+    format="%(asctime)s: %(levelname)s: %(message)s",
+    level=logging.DEBUG if DEBUG else logging.INFO,
+    )
 
 # Function to get output of shell command
 def shell_exec(command):
     res = subprocess.run(command, shell=True, capture_output=True, encoding="utf8", errors="replace")
-    if res.stderr:
-        msg = f"Probable issue executing shell command {command} :: {res.stderr.strip()}"
-        logging.warning(msg)
-    return res.stdout.strip()
+    stdout = res.stdout.strip()
+    stderr = res.stderr.strip()
+    if stderr:
+        logging.debug(f"Probable issue executing shell command {command} :: {stderr}")
+    return stdout + stderr
 
 # Function to generate snapper description
 def gen_desc(prefix, action, packages):
@@ -45,7 +51,7 @@ apt_path = shell_exec("command -v apt")
 # Get path to snapper
 snapper_path = shell_exec("command -v snapper")
 
-if not (apt_path or snapper_path):
+if not apt_path or not snapper_path:
     msg = f"Error: Cannot find apt and/or snapper in PATH ({os.environ.get('PATH')}) for user {os.environ.get('USER')}"
     print(msg)
     logging.error(msg)
@@ -110,16 +116,16 @@ elif action == "post":
         new_packages = shell_exec("apt list --installed | cut -d '/' -f 1").split()
         removed_packages = list( set(old_packages) - set(new_packages) )
         # update description of pre snapshot
-        apt_action = "remove"
+        apt_action = "remove" if removed_packages else "unknown"
         snapper_description = gen_desc("Before apt", apt_action, removed_packages)
         command = f"{snapper_path} -c {SNAPPER_CONF} modify -d '{snapper_description}' {pre_num}"
         shell_exec(command)
-        logging.info(f"apt {apt_action} {' '.join(removed_packages)}")
+        logging.info(f"apt {apt_action} operation of packages: {' '.join(removed_packages)}")
         # generate description for post snapshot
         snapper_description = gen_desc("After apt", apt_action, removed_packages)
     else:
         snapper_description = gen_desc("After apt", apt_action, pkg_names)
-        logging.info(f"apt {apt_action} {' '.join(pkg_names)}")
+        logging.info(f"apt {apt_action} operation of packages: {' '.join(pkg_names)}")
     # take snapper post snapshot
     command = f"{snapper_path} -c {SNAPPER_CONF} create -t post -c number --pre-number {pre_num} -p -d '{snapper_description}'"
     post_num = shell_exec(command)
@@ -128,4 +134,3 @@ elif action == "post":
     print(msg)
     logging.info(msg)
     sys.exit()
-

@@ -15,7 +15,15 @@ cp snap-apt/scripts/snap_apt.py /usr/bin/snap-apt
 cp snap-apt/hooks/80snap-apt /etc/apt/apt.conf.d/
 cp snap-apt/logrotate/snap-apt /etc/logrotate.d/
 rm -f /etc/apt/apt.conf.d/80snapper
-sed -i 's/DISABLE_APT_SNAPSHOT=\"no\"/DISABLE_APT_SNAPSHOT=\"yes\"/g' /etc/default/snapper
+sed -i 's/DISABLE_APT_SNAPSHOT="no"/DISABLE_APT_SNAPSHOT="yes"/g' /etc/default/snapper
+```
+
+## Uninstallation
+```
+rm -f /usr/bin/snap-apt
+rm -f /etc/apt/apt.conf.d/80snap-apt
+rm -f /etc/logrotate.d/snap-apt
+sed -i 's/DISABLE_APT_SNAPSHOT="yes"/DISABLE_APT_SNAPSHOT="no"/g' /etc/default/snapper
 ```
 
 ## Configuration
@@ -25,4 +33,4 @@ By default, the snapper configuration named
 
 ## Troubleshooting
 By default, the log is written to `/var/log/snap-apt.log`.
-
+To enable debug output, set constant `DEBUG = True` in `/usr/bin/snap-apt`.
